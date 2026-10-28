@@ -2,12 +2,14 @@
 
 Devtools extension for observing ARIA announcements.
 
+![screenshot of announcements devtools panel](./screenshot.png)
+
 Adds an **Announcements** tab to browser DevTools that logs, as they happen:
 
 - Calls to [`ariaNotify`](https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Accessibility/AriaNotify/explainer.md) on elements and the document (when supported by the browser).
 - Changes to ARIA live regions: elements with `aria-live="polite"` / `aria-live="assertive"`, live roles (`alert`, `status`, `log`), and `<output>` elements. `aria-atomic` and `aria-relevant` are respected, and inserted `role="alert"` elements are logged too.
 
-Assertive announcements (`aria-live="assertive"`, `role="alert"`, and `ariaNotify` with `priority: "high"`) are shown in **bold**. New announcements are appended to the bottom, and the view auto-scrolls if it is already scrolled to the bottom. Use **Clear** to empty the log, and **Preserve log** to keep entries across page navigations.
+Assertive announcements (`aria-live="assertive"`, `role="alert"`, and `ariaNotify` with `priority: "high"`) are shown in **bold**. Use **Clear** to empty the log, and **Preserve log** to keep entries across page navigations.
 
 ## Installing (unpacked)
 
