@@ -3,8 +3,7 @@
 
 const PORT_PREFIX = "announcements-panel:";
 
-/** @type {Map<number, Set<chrome.runtime.Port>>} */
-const panelsByTab = new Map();
+const panelsByTab = new Map<number, Set<chrome.runtime.Port>>();
 
 chrome.runtime.onConnect.addListener((port) => {
   if (!port.name.startsWith(PORT_PREFIX)) return;
@@ -23,7 +22,7 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-chrome.runtime.onMessage.addListener((message, sender) => {
+chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender) => {
   const tabId = sender.tab?.id;
   if (tabId === undefined) return;
   const ports = panelsByTab.get(tabId);

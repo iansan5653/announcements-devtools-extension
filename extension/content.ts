@@ -1,10 +1,10 @@
 // Runs in the isolated world. Observes ARIA live regions, receives ariaNotify
-// calls from content-main.js, and forwards everything to the background worker.
+// calls from content-main.ts, and forwards everything to the background worker.
 (() => {
   const ARIA_NOTIFY_EVENT = "announcements-devtools:ariaNotify";
 
   // Roles with an implicit live region politeness.
-  const LIVE_ROLES = {
+  const LIVE_ROLES: Readonly<Record<string, Politeness | undefined>> = {
     alert: "assertive",
     status: "polite",
     log: "polite",
@@ -12,7 +12,7 @@
     timer: "off",
   };
 
-  const send = (message) => {
+  const send = (message: ExtensionMessage) => {
     try {
       chrome.runtime.sendMessage(message).catch(() => {});
     } catch {
@@ -20,15 +20,15 @@
     }
   };
 
-  const report = (announcement) =>
+  const report = (announcement: Omit<Announcement, "timestamp">) =>
     send({
       type: "announcement",
       announcement: { ...announcement, timestamp: Date.now() },
     });
 
-  const normalize = (text) => text.replace(/\s+/g, " ").trim();
+  const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
 
-  const describe = (element) => {
+  const describe = (element: Element) => {
     let description = element.localName;
     if (element.id) description += `#${element.id}`;
     for (const className of Array.from(element.classList).slice(0, 3)) {
@@ -39,19 +39,20 @@
     return description;
   };
 
-  const getRole = (element) =>
+  const getRole = (element: Element) =>
     element.getAttribute("role")?.trim().split(/\s+/)[0].toLowerCase() ||
     (element.localName === "output" ? "status" : null);
 
   /** Returns the politeness of `element` if it defines a live region (including `"off"`). */
-  const getPoliteness = (element) => {
+  const getPoliteness = (element: Element): Politeness | null => {
     const live = element.getAttribute("aria-live")?.trim().toLowerCase();
     if (live === "polite" || live === "assertive" || live === "off") return live;
-    return LIVE_ROLES[getRole(element)] ?? null;
+    const role = getRole(element);
+    return role ? LIVE_ROLES[role] ?? null : null;
   };
 
   /** Finds the nearest live region containing `node`. */
-  const getLiveRegion = (node) => {
+  const getLiveRegion = (node: Node) => {
     for (
       let element = node instanceof Element ? node : node.parentElement;
       element;
@@ -64,10 +65,10 @@
     return null;
   };
 
-  const isHidden = (element) =>
+  const isHidden = (element: Element) =>
     element.closest("[aria-hidden='true'], [hidden]") !== null;
 
-  const getText = (node) => {
+  const getText = (node: Node): string => {
     if (node instanceof Text) {
       return node.parentElement && isHidden(node.parentElement) ? "" : normalize(node.data);
     }
@@ -77,7 +78,7 @@
     return normalize((node instanceof HTMLElement ? node.innerText : null) ?? node.textContent ?? "");
   };
 
-  const getRelevant = (region) => {
+  const getRelevant = (region: Element) => {
     const value = region.closest("[aria-relevant]")?.getAttribute("aria-relevant");
     const tokens = new Set((value || "additions text").trim().toLowerCase().split(/\s+/));
     const all = tokens.has("all");
@@ -88,11 +89,12 @@
     };
   };
 
-  const handleMutations = (mutations) => {
-    /** @type {Map<Element, {politeness: string, parts: string[]}>} */
-    const changes = new Map();
+  type LiveRegion = NonNullable<ReturnType<typeof getLiveRegion>>;
 
-    const markChanged = (live) => {
+  const handleMutations = (mutations: MutationRecord[]) => {
+    const changes = new Map<Element, { politeness: Politeness; parts: string[] }>();
+
+    const markChanged = (live: LiveRegion) => {
       let change = changes.get(live.region);
       if (!change) {
         change = { politeness: live.politeness, parts: [] };
@@ -101,7 +103,7 @@
       return change;
     };
 
-    const addPart = (live, text) => {
+    const addPart = (live: LiveRegion, text: string) => {
       if (text) markChanged(live).parts.push(text);
     };
 
@@ -126,7 +128,7 @@
       const atomic = live.region.getAttribute("aria-atomic") === "true";
 
       // Atomic regions are announced in full, so only record that they changed.
-      const record = (text) => (atomic ? markChanged(live) : addPart(live, text));
+      const record = (text: string) => (atomic ? markChanged(live) : addPart(live, text));
 
       if (mutation.type === "characterData") {
         if (relevant.text) record(getText(mutation.target));
@@ -160,6 +162,7 @@
   };
 
   document.addEventListener(ARIA_NOTIFY_EVENT, (event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail !== "string") return;
     try {
       report({ kind: "ariaNotify", ...JSON.parse(event.detail) });
     } catch {

@@ -1,0 +1,16 @@
+{
+  "name": "announcements-devtools-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build.mjs",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.0",
+    "fflate": "^0.8.2",
+    "typescript": "^5.9.3"
+  }
+}

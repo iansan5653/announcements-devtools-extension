@@ -1,9 +1,15 @@
 const tabId = chrome.devtools.inspectedWindow.tabId;
 
-const scroller = document.getElementById("scroller");
-const log = document.getElementById("log");
-const clearButton = document.getElementById("clear");
-const preserveLog = document.getElementById("preserve-log");
+function getElement<T extends HTMLElement>(id: string, type: { new(): T }): T {
+  const element = document.getElementById(id);
+  if (!(element instanceof type)) throw new Error(`Missing panel element: ${id}`);
+  return element;
+}
+
+const scroller = getElement("scroller", HTMLDivElement);
+const log = getElement("log", HTMLOListElement);
+const clearButton = getElement("clear", HTMLButtonElement);
+const preserveLog = getElement("preserve-log", HTMLInputElement);
 
 if (chrome.devtools.panels.themeName === "dark") {
   document.documentElement.classList.add("dark");
@@ -13,26 +19,26 @@ const isScrolledToBottom = () =>
   scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 2;
 
 /** Appends `item` to the log, keeping the view pinned to the bottom if it already was. */
-const append = (item) => {
+const append = (item: HTMLElement) => {
   const shouldScroll = isScrolledToBottom();
   log.append(item);
   if (shouldScroll) scroller.scrollTop = scroller.scrollHeight;
 };
 
-const createElement = (tagName, className, text) => {
+const createElement = <K extends keyof HTMLElementTagNameMap>(tagName: K, className: string, text?: string) => {
   const element = document.createElement(tagName);
   if (className) element.className = className;
   if (text !== undefined) element.textContent = text;
   return element;
 };
 
-const formatTime = (timestamp) => {
+const formatTime = (timestamp: number) => {
   const date = new Date(timestamp);
-  const pad = (value, length = 2) => String(value).padStart(length, "0");
+  const pad = (value: number, length = 2) => String(value).padStart(length, "0");
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
 };
 
-const addAnnouncement = ({ kind, text, politeness, priority, source, timestamp }, frameUrl) => {
+const addAnnouncement = ({ kind, text, politeness, priority, source, timestamp }: Announcement, frameUrl?: string | null) => {
   const entry = createElement("li", `entry ${politeness}`);
 
   const time = createElement("time", "", formatTime(timestamp));
@@ -56,7 +62,7 @@ const addAnnouncement = ({ kind, text, politeness, priority, source, timestamp }
   append(entry);
 };
 
-const addNavigation = (url) => {
+const addNavigation = (url: string) => {
   if (!preserveLog.checked) {
     log.replaceChildren();
     return;
@@ -68,7 +74,7 @@ clearButton.addEventListener("click", () => log.replaceChildren());
 
 const connect = () => {
   const port = chrome.runtime.connect({ name: `announcements-panel:${tabId}` });
-  port.onMessage.addListener((message) => {
+  port.onMessage.addListener((message: ExtensionMessage) => {
     if (message.type === "announcement") addAnnouncement(message.announcement, message.frameUrl);
     else if (message.type === "navigated") addNavigation(message.url);
   });

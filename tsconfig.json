@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "none",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["chrome"],
+    "strict": true,
+    "noEmitOnError": true,
+    "rootDir": "extension",
+    "outDir": "dist/extension"
+  },
+  "include": ["extension/**/*.ts"]
+}

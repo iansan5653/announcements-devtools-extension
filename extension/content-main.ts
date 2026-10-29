@@ -4,7 +4,7 @@
 (() => {
   const EVENT_NAME = "announcements-devtools:ariaNotify";
 
-  const describe = (target) => {
+  const describe = (target: unknown) => {
     if (target instanceof Document) return "document";
     if (!(target instanceof Element)) return String(target);
     let description = target.localName;
@@ -23,7 +23,7 @@
     if (typeof original !== "function") continue;
 
     const wrapped = {
-      ariaNotify(announcement, options) {
+      ariaNotify(this: Element | Document, announcement: string, options?: { priority?: string }) {
         const result = original.apply(this, arguments);
         try {
           const priority = options?.priority ?? "normal";
