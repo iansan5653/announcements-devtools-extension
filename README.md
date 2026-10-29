@@ -23,6 +23,17 @@ The extension targets Chromium-based browsers (Chrome, Edge) version 111 or newe
 
 After changing the extension's files, click the reload button on the extension's card in `chrome://extensions`, then reload the inspected page and reopen DevTools.
 
+## Demo
+
+Open [demo/index.html](./demo/index.html) in a browser to try all three `aria-live` values,
+the live roles (`alert`, `status`, `log`, `marquee`, and `timer`), native `<output>`,
+and document/element `ariaNotify` calls (when supported).
+Each bordered region has add, update, remove, and clear controls, plus `aria-atomic`,
+`aria-relevant`, and `aria-busy` settings. Use a screen reader or the Announcements tab
+to observe the results; `off`, `marquee`, and `timer` are intentionally not live by default.
+When using a local file, enable **Allow access to file URLs** in the extension's details
+to let the Announcements tab observe it.
+
 ## Limitations
 
 - This logs what the page _asks_ to be announced. It doesn't use a screen reader, so actual speech output may differ depending on the assistive technology.

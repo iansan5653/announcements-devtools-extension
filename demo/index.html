@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARIA Announcements Demo</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.5; }
+    body { max-width: 76rem; margin: auto; padding: 1.5rem; }
+    h1, h2, h3 { line-height: 1.2; }
+    button, input, select { font: inherit; }
+    button, select { padding: .3rem .5rem; }
+    input[type="text"] { box-sizing: border-box; width: 100%; padding: .4rem; }
+    button { cursor: pointer; }
+    button:disabled { cursor: default; }
+    .examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
+    .example { border: 1px solid GrayText; border-radius: .5rem; padding: 1rem; }
+    .example h3 { margin-top: 0; }
+    .settings, .actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: .75rem 0; align-items: center; }
+    .region { display: block; border: 2px dashed GrayText; padding: .75rem; min-height: 4rem; overflow-wrap: anywhere; }
+    .region p { margin: .25rem 0; }
+    .region:empty::before { content: "Empty region"; color: GrayText; }
+    .hint { color: GrayText; }
+    #notify-result { min-height: 1.5em; }
+  </style>
+</head>
+<body>
+  <h1><abbr title="Accessible Rich Internet Applications">ARIA</abbr> Announcements Demo</h1>
+  <p>Use a screen reader or the extension's Announcements DevTools tab to explore announcements.
+    Actual speech depends on the browser and assistive technology. Controls are outside the bordered live regions.</p>
+
+  <h2>Live regions</h2>
+  <p>Each region starts empty. Add content, update the last item, remove it, or clear the region.
+    Settings apply to that region only; changing a setting does not itself add content.</p>
+  <p><code>aria-atomic</code> controls whether the whole region is announced.
+    <code>aria-relevant</code> selects which changes matter (removals are not included by default).
+    Set <code>aria-busy</code> while making changes, then uncheck it to release the pending updates.
+    "Default" leaves the attribute absent, preserving the role's implicit behavior.</p>
+  <div id="examples" class="examples"></div>
+
+  <h2><code>ariaNotify</code></h2>
+  <section class="example" aria-labelledby="notify-heading">
+    <h3 id="notify-heading">Announce without changing live-region content</h3>
+    <p>Requires browser support for <code>ariaNotify</code>. Sending a notification does not change the target's text.</p>
+    <label for="notify-message">Announcement text</label>
+    <input id="notify-message" type="text" value="Your changes have been saved.">
+    <div class="settings">
+      <label>Target
+        <select id="notify-target">
+          <option value="document">document.ariaNotify()</option>
+          <option value="element">element.ariaNotify()</option>
+        </select>
+      </label>
+      <label>Priority
+        <select id="notify-priority">
+          <option value="normal">normal</option>
+          <option value="high">high</option>
+        </select>
+      </label>
+    </div>
+    <p id="notify-support"></p>
+    <button id="notify-send" type="button">Send announcement</button>
+    <p id="notify-result"></p>
+    <div id="notify-element" class="region" aria-label="Element notification target">Element notification target (not a live region).</div>
+  </section>
+
+  <template id="example-template">
+    <section class="example">
+      <h3></h3>
+      <p class="description"></p>
+      <label class="message-label">Content text</label>
+      <input class="message" type="text" value="A new announcement">
+      <div class="settings">
+        <label><code>aria-atomic</code>
+          <select data-attribute="aria-atomic">
+            <option value="">Default</option>
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </label>
+        <label><code>aria-relevant</code>
+          <select data-attribute="aria-relevant">
+            <option value="">Default (additions text)</option>
+            <option value="additions">additions</option>
+            <option value="text">text</option>
+            <option value="removals">removals</option>
+            <option value="additions text">additions text</option>
+            <option value="additions removals">additions removals</option>
+            <option value="text removals">text removals</option>
+            <option value="all">all</option>
+          </select>
+        </label>
+        <label><input class="busy" type="checkbox"> <code>aria-busy</code></label>
+      </div>
+      <div class="actions">
+        <button type="button" data-action="add">Add content</button>
+        <button type="button" data-action="update" disabled>Update last</button>
+        <button type="button" data-action="remove" disabled>Remove last</button>
+        <button type="button" data-action="clear" disabled>Clear</button>
+      </div>
+      <p class="hint">Only content inside the dashed border is in the region.</p>
+    </section>
+  </template>
+
+  <script>
+    const examples = [
+      { id: "polite", attribute: "aria-live", value: "polite", description: "Announces changes when the screen reader is idle." },
+      { id: "assertive", attribute: "aria-live", value: "assertive", description: "Requests an immediate announcement, potentially interrupting speech." },
+      { id: "off", attribute: "aria-live", value: "off", description: "Does not normally announce changes unless focus is inside the region." },
+      { id: "alert", attribute: "role", value: "alert", description: "Implicit assertive live region; atomic by default." },
+      { id: "status", attribute: "role", value: "status", description: "Implicit polite live region; atomic by default." },
+      { id: "log", attribute: "role", value: "log", description: "Implicit polite live region for sequential updates; not atomic by default." },
+      { id: "marquee", attribute: "role", value: "marquee", description: "Implicit aria-live=off for changing information; not atomic by default." },
+      { id: "timer", attribute: "role", value: "timer", description: "Implicit aria-live=off for a numerical time counter; not atomic by default. Enter a time value to update it manually." },
+      { id: "output", tag: "output", description: "Native HTML output element with an implicit status role." }
+    ];
+
+    const template = document.getElementById("example-template");
+    for (const example of examples) {
+      const card = template.content.firstElementChild.cloneNode(true);
+      const heading = card.querySelector("h3");
+      heading.id = `${example.id}-heading`;
+      const code = document.createElement("code");
+      code.textContent = example.tag ? "<output>" : `${example.attribute}="${example.value}"`;
+      heading.append(code);
+      card.setAttribute("aria-labelledby", heading.id);
+      card.querySelector(".description").textContent = example.description;
+
+      const message = card.querySelector(".message");
+      message.id = `${example.id}-message`;
+      card.querySelector(".message-label").htmlFor = message.id;
+      if (example.id === "timer") message.value = "00:30";
+
+      const region = document.createElement(example.tag || "div");
+      region.id = `${example.id}-region`;
+      region.className = "region";
+      region.tabIndex = 0;
+      region.setAttribute("aria-labelledby", heading.id);
+      if (example.attribute) region.setAttribute(example.attribute, example.value);
+      card.append(region);
+
+      for (const select of card.querySelectorAll("[data-attribute]")) {
+        select.addEventListener("change", () => {
+          if (select.value) region.setAttribute(select.dataset.attribute, select.value);
+          else region.removeAttribute(select.dataset.attribute);
+        });
+      }
+      card.querySelector(".busy").addEventListener("change", (event) => {
+        region.setAttribute("aria-busy", String(event.target.checked));
+      });
+
+      const buttons = card.querySelectorAll("[data-action]");
+      for (const button of buttons) {
+        button.addEventListener("click", () => {
+          const action = button.dataset.action;
+          if (action === "add" || action === "update") {
+            message.setCustomValidity(message.value.trim() ? "" : "Enter some content first.");
+            if (!message.reportValidity()) return;
+          }
+          if (action === "add") {
+            const item = document.createElement("span");
+            item.style.display = "block";
+            item.textContent = message.value;
+            region.append(item);
+          } else if (action === "update") {
+            region.lastElementChild.firstChild.data = message.value;
+          } else if (action === "remove") {
+            region.lastElementChild.remove();
+          } else if (action === "clear") {
+            region.replaceChildren();
+          }
+          for (const control of buttons) {
+            if (control.dataset.action !== "add") control.disabled = !region.childElementCount;
+          }
+        });
+      }
+      message.addEventListener("input", () => message.setCustomValidity(""));
+      document.getElementById("examples").append(card);
+    }
+
+    const notifyTarget = document.getElementById("notify-target");
+    const notifyMessage = document.getElementById("notify-message");
+    const notifyButton = document.getElementById("notify-send");
+    const notifyResult = document.getElementById("notify-result");
+    const getNotifyTarget = () => notifyTarget.value === "document"
+      ? document : document.getElementById("notify-element");
+
+    function updateNotifySupport() {
+      const supported = typeof getNotifyTarget().ariaNotify === "function";
+      notifyButton.disabled = !supported;
+      document.getElementById("notify-support").textContent = supported
+        ? "This browser supports ariaNotify on the selected target."
+        : "ariaNotify is not supported on this target in this browser.";
+      notifyResult.textContent = "";
+    }
+    notifyTarget.addEventListener("change", updateNotifySupport);
+    updateNotifySupport();
+    notifyMessage.addEventListener("input", () => notifyMessage.setCustomValidity(""));
+    notifyButton.addEventListener("click", () => {
+      notifyMessage.setCustomValidity(notifyMessage.value.trim() ? "" : "Enter an announcement first.");
+      if (!notifyMessage.reportValidity()) return;
+      const priority = document.getElementById("notify-priority").value;
+      try {
+        getNotifyTarget().ariaNotify(notifyMessage.value, { priority });
+        notifyResult.textContent = `Sent to ${notifyTarget.value} with ${priority} priority: ${notifyMessage.value}`;
+      } catch (error) {
+        console.error("ariaNotify failed:", error);
+        notifyResult.textContent = `ariaNotify failed: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
